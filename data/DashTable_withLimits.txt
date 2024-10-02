@@ -1,0 +1,176 @@
+table = dash_table.DataTable(id="table",
+    editable=True,
+    columns=[
+        {
+            "name": "Case Name",
+            "id": "case_name",
+            "type": "string",
+            #"format": {"specifier": ",.0f"},
+            "editable": True,
+            "on_change": {"failure": "default"},
+        },
+        {
+            "name": "Well Spacing",
+            "id": "well_spacing",
+            "type": "numeric",
+            "format": {"specifier": ",.0f"},
+            "editable": True,
+            "on_change": {"failure": "default"},
+        },
+        {
+            "name": "Fracture Half Length ratio to Well Spacing",
+            "id": "xf_ratio_to_well_spacing",
+            "type": "numeric",
+            "format": {"specifier": ",.3f"},
+            "editable": True,
+            "on_change": {"failure": "default"},
+        },
+        {
+            "name": "Fracture Height",
+            "id": "hf",
+            "type": "numeric",
+            "format": {"specifier": ",.0f"},
+            "editable": True,
+            "on_change": {"failure": "default"},
+        },
+        {
+            "name": "Number of Fractures",
+            "id": "n_fracs",
+            "type": "numeric",
+            "format": {"specifier": ",.0f"},
+            "editable": True,
+            "on_change": {"failure": "default"},
+        },
+        {
+            "name": "Number of Wells",
+            "id": "n_wells",
+            "type": "numeric",
+            "format": {"specifier": ",.0f"},
+            "editable": False,
+        },
+        {
+            "name": "Well Cost",
+            "id": "well_cost",
+            "type": "numeric",
+            "format": {"specifier": "$,.0f"},
+            "editable": False,
+        },   
+        {
+            "name": "CUMUL",
+            "id": "cumul",
+            "type": "numeric",
+            "format": {"specifier": ",.0f"},
+            "editable": False,
+        },  
+        {
+            "name": "NPV",
+            "id": "npv",
+            "type": "numeric",
+            "format": {"specifier": "$,.0f"},
+            "editable": False,
+        },  
+    ],
+    style_data_conditional=[{
+        'if': {'column_editable': True},
+        'backgroundColor': 'rgb(179, 205, 227)',
+    },
+    {
+        'if': {'column_id': "case_name"},
+        'backgroundColor': 'rgb(253, 205, 172)',
+    },
+    {
+        'if': {'column_editable': False},
+        'backgroundColor': 'rgb(230, 245, 201)',
+        #'color': 'red'
+    },
+    {
+        'if': {
+            'filter_query': '{well_spacing} < "'+str(bounds[0,0])+'"',
+            'column_id': "well_spacing"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{well_spacing} > "'+str(bounds[0,1])+'"',
+            'column_id': "well_spacing"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{xf_ratio_to_well_spacing} < "'+str(bounds[1,0])+'"',
+            'column_id': "xf_ratio_to_well_spacing"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{xf_ratio_to_well_spacing} > "'+str(bounds[1,1])+'"',
+            'column_id': "xf_ratio_to_well_spacing"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{hf} < "'+str(bounds[2,0])+'"',
+            'column_id': "hf"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{hf} > "'+str(bounds[2,1])+'"',
+            'column_id': "hf"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{n_fracs} < "'+str(bounds[3,0])+'"',
+            'column_id': "n_fracs"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {
+            'filter_query': '{n_fracs} > "'+str(bounds[3,1])+'"',
+            'column_id': "n_fracs"
+        },
+        'color': 'red',
+        'fontWeight': 'bold'
+    }],
+    style_header_conditional=[{
+        'if': {'column_editable': True},
+        'backgroundColor': 'rgb(179, 205, 227)',
+        'fontWeight': 'bold'
+    },
+    {
+        'if': {'column_id': "case_name"},
+        'backgroundColor': 'rgb(253, 205, 172)',
+        'fontWeight': 'bold'
+    },        
+    {
+        'if': {'column_editable': False},
+        'backgroundColor': 'rgb(230, 245, 201)',
+        'fontWeight': 'bold'
+    }],                             
+    data=df_table_data_example.to_dict("records"),
+    sort_action='native',
+    row_deletable=True,
+    style_table={'overflowX': 'auto'},                             
+    style_cell={'height': 'auto',
+        # all three widths are needed
+        'minWidth': '120px', 'width': '120px', 'maxWidth': '120px',
+        'whiteSpace': 'normal',
+        'overflow': 'hidden',
+        'textOverflow': 'ellipsis',
+    }                             
+)
