@@ -1,8 +1,16 @@
 import os
-import pandas as pd
+import pandas as pd, numpy as np
 
-from dash import Dash, dcc, html, dash_table
-import dash_bootstrap_components as dbc
+PAGE_SIZE = 10
+WELL_NAME_HEADER = "Well Name"
+WELL_TYPE_HEADER = "Well Type"
+WELL_CONTROL_HEADER = "Well Control"
+LOWER_BOUND_HEADER = "LowerBound"
+UPPER_BOUND_HEADER = "UpperBound"
+TIME_HEADER = "Time"
+VALUE_HEADER = "Value"
+FIXED_HEADERS = [WELL_NAME_HEADER, WELL_TYPE_HEADER, WELL_CONTROL_HEADER,
+                 LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, TIME_HEADER]
 
 def round_scenario_columns(df):
     temp_dict = {}
@@ -10,33 +18,30 @@ def round_scenario_columns(df):
     df = df.round(temp_dict)
     return df
 
+def well_agg_main_table(x: pd.Series):
+    all_equal = all((item - x.iloc[0])<1e-10 for item in x.values)
+    if all_equal: return x.iloc[0]
+    else: return "varying"
+
+def get_scenario_cols(df):
+    return [col for col in df.columns if col not in FIXED_HEADERS]
+
 def get_avg_df(df):
-    df_avg = df.groupby(by='Well').aggregate(func='mean').reset_index().drop(columns=['Time'])
-    df_avg['id'] = df_avg['Well']
-    df_avg.set_index('id', inplace=True, drop=False)
-    return df_avg
 
-def make_modal():
-    modal = dbc.Modal([
-                dbc.ModalBody([
-                    dbc.Row(html.P("Enter value to overwrite control for all time steps.")),
-                    dbc.Row(dbc.InputGroup(children=[dbc.InputGroupText("Control Value:"),
-                                                        dbc.Input(id="control-input")],
-                                            className="mb-3")),
-                    ]),
-                dbc.ModalFooter([
-                    dbc.Col("", width=4),
-                    dbc.Col(dbc.Button("Confirm", id="confirm", n_clicks=0)),
-                    dbc.Col(dbc.Button("Cancel", id="cancel", n_clicks=0))
-                    ]
-                ),
-            ],
-    id="modal",
-    is_open=False,
-    )
-    return modal
+    """ Return the data for the main table """
+    scenario_columns = get_scenario_cols(df)
+    cols = [WELL_NAME_HEADER] + scenario_columns
 
-def make_table_conditional_formatting(cols):
+    df_main = df[cols].groupby(by=WELL_NAME_HEADER).agg(func=well_agg_main_table).reset_index()
+
+    df_main['id'] = df_main[WELL_NAME_HEADER]
+    df_main.set_index('id', inplace=True, drop=False)
+    return df_main
+
+def make_table_conditional_formatting(df_cols):
+
+    scenario_cols = get_scenario_cols(df_cols)
+
     condition = [
         {
             'if': {
@@ -52,7 +57,7 @@ def make_table_conditional_formatting(cols):
             'column_id': c
         },
         'color':'grey'
-    } for c in cols if c.startswith('Scenario')]
+    } for c in scenario_cols]
 
     condition.extend(cond)
 
