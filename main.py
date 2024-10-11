@@ -8,10 +8,10 @@ from dash.exceptions import PreventUpdate
 
 import dash_bootstrap_components as dbc
 
-from ui.utils import (make_table_conditional_formatting, get_avg_df,
-                      FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
-                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER)
-from ui.ui_components import (make_left_panel, make_right_panel)
+from ui.utils import (FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
+                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, get_scenario_cols)
+from ui.ui_components import (make_left_panel, make_right_panel,
+                              make_main_datatable)
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
@@ -19,9 +19,9 @@ UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
 
 app = Dash(
     __name__,
-    external_stylesheets=[
-        dbc.themes.BOOTSTRAP
-    ],
+    #external_stylesheets=[
+    #    dbc.themes.BOOTSTRAP
+    #],
     suppress_callback_exceptions=True
 )
 
@@ -80,17 +80,39 @@ def render_main_table(_, trigger, state):
 
     # get dataframe
     df = pd.DataFrame(state['df'])
-    df_avg = get_avg_df(df)
 
-    data_df = df_avg.to_dict('records')
-
-    # create column specifications for datatable
-    columns=[{'id': c, 'name': c} for c in df_avg.columns if c != 'id']
-
-    style = make_table_conditional_formatting(df_avg.head(0))
+    # update the table
+    data_df, columns, style = make_main_datatable(df)
 
     return data_df, columns, style
 
+
+## Synch state and datatable when removing columns
+@callback(
+    Output("state-store", "data", allow_duplicate=True),
+    Input('datatable-main', 'columns'),
+    State("state-store", "data"),
+    prevent_initial_call=True
+)
+def synch_state(columns, state):
+    if not columns: raise PreventUpdate
+
+    df = pd.DataFrame(state['df'])
+    table_col_names = [d['name'] for d in columns]
+    state_col_names = get_scenario_cols(df.head(0))
+
+    cols_to_delete = []
+    for s_name in state_col_names:
+        if s_name not in table_col_names:
+            cols_to_delete.append(s_name)
+
+    if not cols_to_delete: raise PreventUpdate
+
+    # table was deleted, synch state
+    df.drop(labels=cols_to_delete, inplace=True, axis=1)
+    state['df'] = df.to_dict()
+
+    return state
 
 ## Load panel with time step table (the right panel)
 @callback(
@@ -251,6 +273,17 @@ def trigger_tables_update(confirm_n, state, scenario):
     state['df'] = df.to_dict('records')
 
     return None, state
+
+
+## Save all scenarios
+@app.callback(
+    Output("save-scenario-toast", "is_open"),
+    Input("save-scenarios", "n_clicks"),
+    State("state-store", "data"),
+    prevent_initial_call=True
+)
+def save_table_to_file(_, state):
+    return True
 
 
 if __name__ == '__main__':

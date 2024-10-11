@@ -8,6 +8,9 @@ import dash_bootstrap_components as dbc
 from ui.utils import (PAGE_SIZE, TIME_HEADER, VALUE_HEADER, WELL_NAME_HEADER,
                       LOWER_BOUND_HEADER, UPPER_BOUND_HEADER)
 
+from ui.utils import  (make_table_conditional_formatting, get_avg_df,
+                       get_scenario_cols)
+
 def make_modal_update_all():
 
     """
@@ -66,6 +69,22 @@ def make_modal_add_scenario():
     )
     return modal
 
+def make_main_datatable(df):
+
+    scenario_cols = get_scenario_cols(df.head(0))
+
+    df_avg = get_avg_df(df)
+
+    data_df = df_avg.to_dict('records')
+
+    # create column specifications for datatable
+    columns=[{'id': c, 'name': c} for c in df_avg.columns if c != 'id']
+
+    [col_def.update({'deletable': True}) for col_def in columns if col_def['name'] in scenario_cols]
+
+    style = make_table_conditional_formatting(df_avg.head(0))
+    return data_df, columns, style
+
 def make_subset_datatable(df, well, scenario, well_bounds):
 
     """
@@ -123,9 +142,19 @@ def make_left_panel():
     dbc.CardBody([
         dbc.Row([
             dbc.Col(html.P("Click on a well scenario to edit controls \
-                        for each time step."), width=10),
+                        for each time step."), width=8),
             dbc.Col(html.Div(dbc.Button("Add Scenario", id='add-scenario',
-                           size="sm")))
+                           size="sm"))),
+            dbc.Col(html.Div(dbc.Button("Save Scenarios", id='save-scenarios',
+                           size="sm"))),
+            dbc.Toast(
+                [html.P("Senarios have been saved!", className="mb-0")],
+                    id="save-scenario-toast",
+                    header="Success",
+                    duration=2000,
+                    is_open=False,
+                    style={"position": "fixed", "top": 10, "right": 10, 'width':250},
+                ),
         ]),
         dbc.Row(html.Br()),
         dbc.Row([

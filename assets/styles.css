@@ -1,8 +1,16 @@
 #datatable-subset, #datatable-main {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .card-header {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 500;
+}
+
+.toast {
+  z-index: 999 !important;
+}
+
+p, span.input-group-text, input.form-control {
+  font-size: 14px;
 }
