@@ -1,3 +1,5 @@
 .python-version
 */__pycache__/
 __pycache__/
+assets/bootstrap-5.3.3-dist/
+
