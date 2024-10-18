@@ -123,6 +123,7 @@ def make_subset_datatable(df, well, scenario, well_bounds):
     table = dash_table.DataTable(
         id='datatable-subset',
         page_size=PAGE_SIZE,
+        editable=True,
         data = df_subset.to_dict('records'),
         columns=column,
         style_data_conditional=style_data_conditional,
