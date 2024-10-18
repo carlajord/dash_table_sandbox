@@ -9,7 +9,8 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
 from ui.utils import (FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
-                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, get_scenario_cols)
+                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, DEFAULT_SCENARIO_COL,
+                      get_scenario_cols)
 from ui.ui_components import (make_left_panel, make_right_panel,
                               make_main_datatable)
 
@@ -19,9 +20,9 @@ UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
 
 app = Dash(
     __name__,
-    #external_stylesheets=[
-    #    dbc.themes.BOOTSTRAP
-    #],
+    external_stylesheets=[
+        dbc.themes.BOOTSTRAP
+    ],
     suppress_callback_exceptions=True
 )
 
@@ -29,7 +30,8 @@ df_init = pd.read_csv(os.path.join(DATA_PATH,'ForecastScenarios.csv'))
 
 state_dict = {'df': df_init.to_dict(),
               'active_well': None,
-              'active_scenario': None}
+              'active_scenario': None,
+              'new_scenario_init':[]}
 
 layout = dbc.Container(
     id='main-layout',
@@ -40,7 +42,7 @@ layout = dbc.Container(
             id="load-panels"),
         dcc.Store(id="state-store", data=state_dict)
     ],
-    fluid=False,
+    fluid=True,
 )
 
 app.layout = layout
@@ -58,6 +60,8 @@ def start_page(_, state):
 
     well = state['active_well']
     scenario = state['active_scenario']
+
+    state['new_scenario_init'] = df[[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]].mean(axis=1).values
 
     children = [
         dbc.Col(id="left-panel", children=make_left_panel(), width=8),
@@ -257,16 +261,16 @@ def enable_confirm_button_add_scenario(name_input, state):
 )
 def trigger_tables_update(confirm_n, state, scenario):
 
-
     if not ("confirm-add-scenario" == ctx.triggered_id and scenario):
         raise PreventUpdate
 
     df = pd.DataFrame(state['df'])
 
     # enter the control value for the new scenario
-    #control_input = int((df[LOWER_BOUND_HEADER].mean()+df[UPPER_BOUND_HEADER].mean())/2)
-    control_input = int(df[LOWER_BOUND_HEADER].max())
-    new_values = [np.float64(control_input)] * len(df)
+    if DEFAULT_SCENARIO_COL in df.columns:
+        new_values = df[DEFAULT_SCENARIO_COL].values
+    else:
+        new_values = df[[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]].mean(axis=1).values
 
     df[scenario] = new_values
 

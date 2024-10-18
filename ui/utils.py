@@ -9,6 +9,7 @@ LOWER_BOUND_HEADER = "LowerBound"
 UPPER_BOUND_HEADER = "UpperBound"
 TIME_HEADER = "Time"
 VALUE_HEADER = "Value"
+DEFAULT_SCENARIO_COL = "Default Scenario"
 FIXED_HEADERS = [WELL_NAME_HEADER, WELL_TYPE_HEADER, WELL_CONTROL_HEADER,
                  LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, TIME_HEADER]
 
@@ -27,9 +28,9 @@ def get_avg_df(df):
     """ Return the data for the main table """
 
     scenario_columns = get_scenario_cols(df)
-    cols = [WELL_NAME_HEADER] + scenario_columns
+    cols = [WELL_NAME_HEADER, WELL_TYPE_HEADER, WELL_CONTROL_HEADER] + scenario_columns
 
-    df_main = df[cols].groupby(by=WELL_NAME_HEADER).agg(func=well_agg_main_table).reset_index()
+    df_main = df[cols].groupby(by=[WELL_NAME_HEADER,WELL_TYPE_HEADER, WELL_CONTROL_HEADER])[scenario_columns].agg(func=well_agg_main_table).reset_index()
 
     df_main['id'] = df_main[WELL_NAME_HEADER]
     df_main.set_index('id', inplace=True, drop=False)
