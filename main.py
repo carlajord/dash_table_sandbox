@@ -18,6 +18,23 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
 
 
+"""
+dataiku assets
+client = dataiku.api_client()
+proj_id = client.get_default_project().project_key
+lib_path = f"./project-python-libs/{proj_id}/python/assets"
+
+# create local assets folder
+assets_folder = os.path.realpath(os.path.join(sys.argv[1], '../assets'))
+os.mkdir(assets_folder)
+
+## Option 1: # this approach works better
+# save styles to local assets folder from python library
+for asset in os.listdir(lib_path):
+    shutil.copy(lib_path + "/" + asset, assets_folder + "/" + asset)
+"""
+
+
 app = Dash(
     __name__,
     external_stylesheets=[
