@@ -10,7 +10,7 @@ import dash_bootstrap_components as dbc
 
 from ui.utils import (FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
                       LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, DEFAULT_SCENARIO_COL,
-                      get_scenario_cols)
+                      VARIABLE_NAME_HEADER, VARIABLE_NAME_ORIGINAL, get_scenario_cols)
 from ui.ui_components import (make_left_panel, make_right_panel,
                               make_main_datatable)
 
@@ -43,7 +43,7 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-df_init = pd.read_csv(os.path.join(DATA_PATH,'ForecastScenarios.csv'))
+df_init = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable.csv'))
 
 state_dict = {'df': df_init.to_dict(),
               'active_well': None,
@@ -126,6 +126,7 @@ def synch_state(columns, state):
     for s_name in state_col_names:
         if s_name not in table_col_names:
             cols_to_delete.append(s_name)
+            cols_to_delete.append(f"{VARIABLE_NAME_HEADER} - {s_name}")
 
     if not cols_to_delete: raise PreventUpdate
 
@@ -194,18 +195,28 @@ def table_editing(active_cell, confirm_n,
     elif None in [well, scenario]:
         raise PreventUpdate
 
-    elif active_cell['column_id'] != VALUE_HEADER:
+    elif active_cell['column_id'] not in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
         raise PreventUpdate
 
+    elif active_cell['column_id'] == VARIABLE_NAME_HEADER:
+        col = VARIABLE_NAME_HEADER
     else:
-        # update from table input (user changes values manually)
-        new_values = pd.DataFrame(rows)[VALUE_HEADER].values
+        col = VALUE_HEADER
+    
+    # update from table input (user changes values manually)
+    new_values = pd.DataFrame(rows)[col].values
 
     new_rows = pd.DataFrame(rows)
-    new_rows[VALUE_HEADER] = new_values
+    new_rows[col] = new_values
     new_rows = new_rows.to_dict('records')
 
-    df.loc[df[WELL_NAME_HEADER] == well, scenario] = np.float64(new_values)
+    # update values in the state
+    if col == VALUE_HEADER:
+        df.loc[df[WELL_NAME_HEADER] == well, scenario] = np.float64(new_values)
+    else:
+        col_name = f"{VARIABLE_NAME_HEADER} - {scenario}"
+        df.loc[df[WELL_NAME_HEADER] == well, col_name] = new_values
+
     state['df'] = df.to_dict()
 
     return state, new_rows, None
@@ -237,6 +248,18 @@ def enable_confirm_button_update_all(control_input):
         return False
     return True
 
+## Open or close popup to confirm reset table
+@app.callback(
+    Output("modal-reset-table", "is_open"),
+    Input("reset-table", "n_clicks"),
+    Input("confirm-reset-table", "n_clicks"),
+    Input('cancel-reset-table', 'n_clicks'),
+    State("modal-reset-table", "is_open")
+)
+def toggle_modal_reset_table(reset_n, confirm_n, cancel_n, is_open):
+    if reset_n or cancel_n or confirm_n:
+        return not is_open
+    return is_open
 
 ## Open or close popup to add scenario
 @app.callback(
@@ -266,30 +289,33 @@ def enable_confirm_button_add_scenario(name_input, state):
         return False
     return True
 
-
 ## Update add scenario and trigger reloading of tables
 @app.callback(
     Output('trigger-table-update', 'children', allow_duplicate=True),
     Output("state-store", "data"),
     Input("confirm-add-scenario", "n_clicks"),
+    Input("confirm-reset-table", "n_clicks"),
     State("state-store", "data"),
     State("add-scenario-name", "value"),
     prevent_initial_call=True
 )
-def trigger_tables_update(confirm_n, state, scenario):
+def trigger_tables_update(confirm_add, confirm_reset, state, scenario):
 
-    if not ("confirm-add-scenario" == ctx.triggered_id and scenario):
+    if not ("confirm-add-scenario" == ctx.triggered_id and scenario) and not ("confirm-reset-table" == ctx.triggered_id):
         raise PreventUpdate
 
-    df = pd.DataFrame(state['df'])
+    if ("confirm-reset-table" == ctx.triggered_id):
+        df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
 
-    # enter the control value for the new scenario
-    if DEFAULT_SCENARIO_COL in df.columns:
-        new_values = df[DEFAULT_SCENARIO_COL].values
     else:
-        new_values = df[[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]].mean(axis=1).values
+        # enter the control value for the new scenario
+        if DEFAULT_SCENARIO_COL in df.columns:
+            new_values = df[DEFAULT_SCENARIO_COL].values
+        else:
+            new_values = df[[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]].mean(axis=1).values
 
-    df[scenario] = new_values
+        df[scenario] = new_values
+        df[f"{VARIABLE_NAME_HEADER} - {scenario}"] = df[VARIABLE_NAME_ORIGINAL]
 
     state['df'] = df.to_dict('records')
 

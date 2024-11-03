@@ -6,7 +6,8 @@ from dash import Dash, dcc, html, dash_table
 import dash_bootstrap_components as dbc
 
 from ui.utils import (PAGE_SIZE, TIME_HEADER, VALUE_HEADER, WELL_NAME_HEADER,
-                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER)
+                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, WELL_CONTROL_HEADER,
+                      VARIABLE_NAME_HEADER, VARIABLE_NAME_ORIGINAL)
 
 from ui.utils import  (make_table_conditional_formatting, get_avg_df,
                        get_scenario_cols)
@@ -69,6 +70,31 @@ def make_modal_add_scenario():
     )
     return modal
 
+def make_modal_reset_table():
+
+    """
+    Pop-up to confirm reset table to original.
+    """
+
+    modal = dbc.Modal([
+                dbc.ModalBody([
+                    dbc.Row(html.P("All variables and values will be reset to the original table.")),
+                    ]),
+                dbc.ModalFooter([
+                    dbc.Row(children=[
+                        dbc.Col(dbc.Button("Confirm", id="confirm-reset-table",
+                                       n_clicks=0, size="sm")),
+                        dbc.Col(dbc.Button("Cancel", id="cancel-reset-table",
+                                        size="sm", n_clicks=0))
+                    ], justify='end')
+                    ]
+                ),
+            ],
+    id="modal-reset-table",
+    is_open=False,
+    )
+    return modal
+
 def make_main_datatable(df):
 
     scenario_cols = get_scenario_cols(df.head(0))
@@ -92,13 +118,24 @@ def make_subset_datatable(df, well, scenario, well_bounds):
     """
 
     if None in [well, scenario]:
-        df_subset = pd.DataFrame([TIME_HEADER, VALUE_HEADER])
+        df_subset = pd.DataFrame([VARIABLE_NAME_ORIGINAL, TIME_HEADER, WELL_CONTROL_HEADER, VALUE_HEADER])
     else:
-        df_subset = df[df[WELL_NAME_HEADER] == well][[TIME_HEADER, scenario]]
+        
+        df_subset = df[df[WELL_NAME_HEADER] == well][[TIME_HEADER, WELL_CONTROL_HEADER, scenario]]
         df_subset.rename(columns={scenario:VALUE_HEADER}, inplace=True)
 
+        variable_name_col = VARIABLE_NAME_ORIGINAL
+        for col in df.columns:
+            if col.startswith(VARIABLE_NAME_HEADER) and scenario in col:
+                variable_name_col = col
+                break
+        # fix dollar sign for markdown
+        df_subset.insert(0, VARIABLE_NAME_HEADER, df[variable_name_col])#.map(lambda x: x.replace("$", "\$")))
+        
     column = [
+        {'id': VARIABLE_NAME_HEADER, 'name': VARIABLE_NAME_HEADER, 'editable':True},
         {'id': TIME_HEADER, 'name': TIME_HEADER, 'editable':False},
+        {'id': WELL_CONTROL_HEADER, 'name': WELL_CONTROL_HEADER, 'editable':False},
         {'id': VALUE_HEADER, 'name': VALUE_HEADER, 'editable':True}
     ]
 
@@ -148,6 +185,8 @@ def make_left_panel():
                            size="sm"))),
             dbc.Col(html.Div(dbc.Button("Save Scenarios", id='save-scenarios',
                            size="sm"))),
+            dbc.Col(html.Div(dbc.Button("Reset Table", id='reset-table',
+                           size="sm"))),
             dbc.Toast(
                 [html.P("Senarios have been saved!", className="mb-0")],
                     id="save-scenario-toast",
@@ -171,6 +210,7 @@ def make_left_panel():
                 )]),
         dbc.Row(html.Br()),
         make_modal_add_scenario(),
+        make_modal_reset_table(),
         ]),
     ])
     return panel
