@@ -181,12 +181,14 @@ def make_left_panel():
         dbc.Row([
             dbc.Col(html.P("Click on a well scenario to edit controls \
                         for each time step."), width=8),
-            dbc.Col(html.Div(dbc.Button("Add Scenario", id='add-scenario',
-                           size="sm"))),
-            dbc.Col(html.Div(dbc.Button("Save Scenarios", id='save-scenarios',
-                           size="sm"))),
-            dbc.Col(html.Div(dbc.Button("Reset Table", id='reset-table',
-                           size="sm"))),
+            dbc.Col(html.Div(
+                children = [
+                    dbc.Button("Add Scenario", id='add-scenario',size="sm"),
+                    dbc.Button("Save Scenarios", id='save-scenarios', size="sm"),
+                    dbc.Button("Reset Table", id='reset-table',size="sm")
+                ],
+                className="d-grid gap-2 d-md-flex justify-content-md-end")
+                ),
             dbc.Toast(
                 [html.P("Senarios have been saved!", className="mb-0")],
                     id="save-scenario-toast",

@@ -2,6 +2,7 @@
 import os, sys
 import pandas as pd, numpy as np
 
+import dash
 from dash import Dash, dcc, html
 from dash import Input, Output, State, callback, ctx
 from dash.exceptions import PreventUpdate
@@ -111,6 +112,7 @@ def render_main_table(_, trigger, state):
 ## Synch state and datatable when removing columns
 @callback(
     Output("state-store", "data", allow_duplicate=True),
+    Output("right-panel", "children", allow_duplicate=True),
     Input('datatable-main', 'columns'),
     State("state-store", "data"),
     prevent_initial_call=True
@@ -134,11 +136,15 @@ def synch_state(columns, state):
     df.drop(labels=cols_to_delete, inplace=True, axis=1)
     state['df'] = df.to_dict()
 
-    return state
+    right_panel_children = make_right_panel(df, None, None)
+    state['active_well'] = None
+    state['active_scenario'] = None
+
+    return state, right_panel_children
 
 ## Load panel with time step table (the right panel)
 @callback(
-    Output("right-panel", 'children'),
+    Output("right-panel", 'children', allow_duplicate=True),
     Output("state-store", "data", allow_duplicate=True),
     Output("update-all", "disabled"),
     Input('datatable-main',  'active_cell'),
@@ -205,10 +211,6 @@ def table_editing(active_cell, confirm_n,
     elif None in [well, scenario]:
         # no action needed if there is no well or scenario selected
         raise PreventUpdate
-
-    #elif active_cell['column_id'] not in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
-    #    # no action needed if active cell is not editable
-    #    raise PreventUpdate
 
     elif active_cell['column_id'] in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
         # update from table input (user changes values manually)
@@ -305,6 +307,7 @@ def enable_confirm_button_add_scenario(name_input, state):
 @app.callback(
     Output('trigger-table-update', 'children', allow_duplicate=True),
     Output("state-store", "data"),
+    Output("right-panel", "children", allow_duplicate=True),
     Input("confirm-add-scenario", "n_clicks"),
     Input("confirm-reset-table", "n_clicks"),
     State("state-store", "data"),
@@ -323,26 +326,18 @@ def trigger_main_table_update(confirm_add, confirm_reset, state, scenario):
 
         df[scenario] = new_values
         df[f"{VARIABLE_NAME_HEADER} - {scenario}"] = df[VARIABLE_NAME_ORIGINAL]
+        right_panel_update = dash.no_update
 
     elif ("confirm-reset-table" == ctx.triggered_id):
         df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
+        right_panel_update = make_right_panel(df, None, None)
 
     else:
         raise PreventUpdate
 
-    #if not ("confirm-add-scenario" == ctx.triggered_id and scenario) and not ("confirm-reset-table" == ctx.triggered_id):
-    #    raise PreventUpdate
-
-    #if ("confirm-reset-table" == ctx.triggered_id):
-    #    df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
-
-    #else:
-    #    df = pd.DataFrame(state['df'])
-
-
     state['df'] = df.to_dict('records')
 
-    return None, state
+    return None, state, right_panel_update
 
 ## Save all scenarios
 @app.callback(
