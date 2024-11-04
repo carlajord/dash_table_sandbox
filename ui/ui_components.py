@@ -252,7 +252,8 @@ def make_right_panel(df, well=None, scenario=None):
                         make_modal_update_all(),
                     ])
                     ]),
-        dbc.Row(table)
+        dbc.Row(table),
+        html.Div(id='trigger-subset-table-update')
     ]
     panel = dbc.Card([
     dbc.CardHeader("Scenario Control per Time Step"),

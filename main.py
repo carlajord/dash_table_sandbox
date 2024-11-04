@@ -130,7 +130,7 @@ def synch_state(columns, state):
 
     if not cols_to_delete: raise PreventUpdate
 
-    # table was deleted, synch state
+    # scenario was deleted, synch state and reset subset table
     df.drop(labels=cols_to_delete, inplace=True, axis=1)
     state['df'] = df.to_dict()
 
@@ -181,42 +181,54 @@ def render_sub_table(active_cell,state):
 def table_editing(active_cell, confirm_n,
                   state, rows, control_input):
 
+    # get stored state
     well = state['active_well']
     scenario = state['active_scenario']
     df = pd.DataFrame(state['df'])
 
+    # get app values
+    new_rows = pd.DataFrame(rows)
+
+    # initialize variables
+    new_values = None
+    col = None
+    
     if "confirm-update-all" == ctx.triggered_id and control_input:
         # update with constant values (confirm button in update-all modal)
         new_values = [np.float64(control_input)] * len(df.loc[df[WELL_NAME_HEADER] == well, scenario])
-
+        col = VALUE_HEADER
+        
     elif not active_cell:
+        # no action needed if there is no active cell
         raise PreventUpdate
 
     elif None in [well, scenario]:
+        # no action needed if there is no well or scenario selected
         raise PreventUpdate
 
-    elif active_cell['column_id'] not in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
-        raise PreventUpdate
+    #elif active_cell['column_id'] not in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
+    #    # no action needed if active cell is not editable
+    #    raise PreventUpdate
 
-    elif active_cell['column_id'] == VARIABLE_NAME_HEADER:
-        col = VARIABLE_NAME_HEADER
-    else:
-        col = VALUE_HEADER
+    elif active_cell['column_id'] in [VALUE_HEADER, VARIABLE_NAME_HEADER]:
+        # update from table input (user changes values manually)
+        new_values = pd.DataFrame(rows)[active_cell['column_id']].values
+        col = active_cell['column_id']
     
-    # update from table input (user changes values manually)
-    new_values = pd.DataFrame(rows)[col].values
+    else:
+        raise PreventUpdate
 
-    new_rows = pd.DataFrame(rows)
+    # place new values in the app table cache
     new_rows[col] = new_values
-    new_rows = new_rows.to_dict('records')
-
+    
     # update values in the state
     if col == VALUE_HEADER:
         df.loc[df[WELL_NAME_HEADER] == well, scenario] = np.float64(new_values)
-    else:
+    elif col == VARIABLE_NAME_HEADER:
         col_name = f"{VARIABLE_NAME_HEADER} - {scenario}"
         df.loc[df[WELL_NAME_HEADER] == well, col_name] = new_values
 
+    new_rows = new_rows.to_dict('records') 
     state['df'] = df.to_dict()
 
     return state, new_rows, None
@@ -299,15 +311,10 @@ def enable_confirm_button_add_scenario(name_input, state):
     State("add-scenario-name", "value"),
     prevent_initial_call=True
 )
-def trigger_tables_update(confirm_add, confirm_reset, state, scenario):
+def trigger_main_table_update(confirm_add, confirm_reset, state, scenario):
 
-    if not ("confirm-add-scenario" == ctx.triggered_id and scenario) and not ("confirm-reset-table" == ctx.triggered_id):
-        raise PreventUpdate
-
-    if ("confirm-reset-table" == ctx.triggered_id):
-        df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
-
-    else:
+    if ("confirm-add-scenario" == ctx.triggered_id and scenario):
+        df = pd.DataFrame(state['df'])
         # enter the control value for the new scenario
         if DEFAULT_SCENARIO_COL in df.columns:
             new_values = df[DEFAULT_SCENARIO_COL].values
@@ -317,10 +324,25 @@ def trigger_tables_update(confirm_add, confirm_reset, state, scenario):
         df[scenario] = new_values
         df[f"{VARIABLE_NAME_HEADER} - {scenario}"] = df[VARIABLE_NAME_ORIGINAL]
 
+    elif ("confirm-reset-table" == ctx.triggered_id):
+        df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
+
+    else:
+        raise PreventUpdate
+
+    #if not ("confirm-add-scenario" == ctx.triggered_id and scenario) and not ("confirm-reset-table" == ctx.triggered_id):
+    #    raise PreventUpdate
+
+    #if ("confirm-reset-table" == ctx.triggered_id):
+    #    df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
+
+    #else:
+    #    df = pd.DataFrame(state['df'])
+
+
     state['df'] = df.to_dict('records')
 
     return None, state
-
 
 ## Save all scenarios
 @app.callback(
