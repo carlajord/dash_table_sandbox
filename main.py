@@ -48,8 +48,8 @@ df_init = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable.csv'))
 
 state_dict = {'df': df_init.to_dict(),
               'active_well': None,
-              'active_scenario': None,
-              'new_scenario_init':[]}
+              'active_scenario': None
+              }
 
 layout = dbc.Container(
     id='main-layout',
@@ -78,8 +78,6 @@ def start_page(_, state):
 
     well = state['active_well']
     scenario = state['active_scenario']
-
-    state['new_scenario_init'] = df[[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]].mean(axis=1).values
 
     children = [
         dbc.Col(id="left-panel", children=make_left_panel(), width=8),

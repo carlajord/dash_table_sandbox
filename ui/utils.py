@@ -70,6 +70,3 @@ def make_table_conditional_formatting(df_cols):
     condition.extend(cond)
 
     return condition
-
-    def reconcile_variable_name():
-        pass
