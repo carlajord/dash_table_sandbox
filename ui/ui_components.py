@@ -5,7 +5,7 @@ import pandas as pd
 from dash import Dash, dcc, html, dash_table
 import dash_bootstrap_components as dbc
 
-from ui.utils import (PAGE_SIZE, TIME_HEADER, VALUE_HEADER, WELL_NAME_HEADER,
+from ui.utils import (PAGE_SIZE, ID_HEADER, TIME_HEADER, VALUE_HEADER, WELL_NAME_HEADER,
                       LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, WELL_CONTROL_HEADER,
                       VARIABLE_NAME_HEADER, VARIABLE_NAME_ORIGINAL)
 
@@ -111,17 +111,18 @@ def make_main_datatable(df):
     style = make_table_conditional_formatting(df_avg.head(0))
     return data_df, columns, style
 
-def make_subset_datatable(df, well, scenario, well_bounds):
+def make_subset_datatable(df, well, scenario):
 
     """
     Makes time step datatable, includes formatting for out of bound values.
     """
 
     if None in [well, scenario]:
-        df_subset = pd.DataFrame([VARIABLE_NAME_ORIGINAL, TIME_HEADER, WELL_CONTROL_HEADER, VALUE_HEADER])
+        df_subset = pd.DataFrame([ID_HEADER, VARIABLE_NAME_ORIGINAL, TIME_HEADER, WELL_CONTROL_HEADER, VALUE_HEADER])
     else:
         
-        df_subset = df[df[WELL_NAME_HEADER] == well][[TIME_HEADER, WELL_CONTROL_HEADER, scenario]]
+        df_subset = df[df[WELL_NAME_HEADER] == well][[ID_HEADER, TIME_HEADER, WELL_CONTROL_HEADER, scenario,
+                                                      LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]]
         df_subset.rename(columns={scenario:VALUE_HEADER}, inplace=True)
 
         variable_name_col = VARIABLE_NAME_ORIGINAL
@@ -130,7 +131,7 @@ def make_subset_datatable(df, well, scenario, well_bounds):
                 variable_name_col = col
                 break
         # fix dollar sign for markdown
-        df_subset.insert(0, VARIABLE_NAME_HEADER, df[variable_name_col])#.map(lambda x: x.replace("$", "\$")))
+        df_subset.insert(1, VARIABLE_NAME_HEADER, df[variable_name_col])#.map(lambda x: x.replace("$", "\$")))
         
     column = [
         {'id': VARIABLE_NAME_HEADER, 'name': VARIABLE_NAME_HEADER, 'editable':True},
@@ -141,7 +142,7 @@ def make_subset_datatable(df, well, scenario, well_bounds):
 
     style_data_conditional = [{
         'if': {
-            'filter_query': f'{{{VALUE_HEADER}}} > {str(well_bounds[1])}',
+            'filter_query': f'{{{VALUE_HEADER}}} > {{{UPPER_BOUND_HEADER}}}',
             'column_id': VALUE_HEADER
         },
         'color': 'red',
@@ -149,7 +150,7 @@ def make_subset_datatable(df, well, scenario, well_bounds):
         },
         {
         'if': {
-            'filter_query': f'{{{VALUE_HEADER}}} < {str(well_bounds[0])}',
+            'filter_query': f'{{{VALUE_HEADER}}} < {{{LOWER_BOUND_HEADER}}}',
             'column_id': VALUE_HEADER
         },
         'color': 'red',
@@ -224,23 +225,19 @@ def make_right_panel(df, well=None, scenario=None):
     """
 
     # dummy for initialization of the app
-    well_bounds = [0,1000]
     well_scenario_name = [html.Div()]
 
     # after initialized we will have well and scenario defined
     if None not in [well, scenario]:
-        well_bounds = [df.loc[df[WELL_NAME_HEADER] == well, LOWER_BOUND_HEADER].min(),
-                   df.loc[df[WELL_NAME_HEADER] == well, UPPER_BOUND_HEADER].max()]
-
         well_scenario_name = [dbc.Row([
                 dcc.Markdown([f'Well Name:  **{well}**  \nScenario:  **{scenario}**'],
                             style={'overflow': 'hidden'}),
-                dcc.Markdown([f'Lower Bound:  **{well_bounds[0]}**  \nUpper Bound:  **{well_bounds[1]}**'],
+                dcc.Markdown(id="bound-frame",
                             style={'overflow': 'hidden'})
             ]),
             dbc.Row(html.Hr())]
 
-    table = make_subset_datatable(df, well, scenario, well_bounds)
+    table = make_subset_datatable(df, well, scenario)
 
     header_and_table = [
         dbc.Row([dbc.Col(html.P("Enter control value for each time \
@@ -263,3 +260,9 @@ def make_right_panel(df, well=None, scenario=None):
     ])
 
     return panel
+
+def make_bound_frame(lower, upper):
+
+    content = [f'Lower Bound:  **{lower}**  \nUpper Bound:  **{upper}**']
+
+    return content

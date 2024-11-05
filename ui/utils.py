@@ -2,6 +2,7 @@ import os
 import pandas as pd, numpy as np
 
 PAGE_SIZE = 10
+ID_HEADER = 'id'
 WELL_NAME_HEADER = "Well Name"
 WELL_TYPE_HEADER = "Well Type"
 WELL_CONTROL_HEADER = "Well Control"
@@ -12,7 +13,7 @@ VALUE_HEADER = "Value"
 VARIABLE_NAME_ORIGINAL = "Variable Name - Original"
 DEFAULT_SCENARIO_COL = "Default Scenario"
 VARIABLE_NAME_HEADER = "Variable Name"
-FIXED_HEADERS = [WELL_NAME_HEADER, WELL_TYPE_HEADER, WELL_CONTROL_HEADER,
+FIXED_HEADERS = [ID_HEADER, WELL_NAME_HEADER, WELL_TYPE_HEADER, WELL_CONTROL_HEADER,
                  LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, TIME_HEADER, VARIABLE_NAME_ORIGINAL]
 
 
@@ -39,8 +40,8 @@ def get_avg_df(df):
 
     df_main = df[cols].groupby(by=[WELL_NAME_HEADER,WELL_TYPE_HEADER])[scenario_columns].agg(func=well_agg_main_table).reset_index()
 
-    df_main['id'] = df_main[WELL_NAME_HEADER]
-    df_main.set_index('id', inplace=True, drop=False)
+    df_main[ID_HEADER] = df_main[WELL_NAME_HEADER]
+    df_main.set_index(ID_HEADER, inplace=True, drop=False)
     return df_main
 
 

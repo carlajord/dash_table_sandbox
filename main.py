@@ -9,15 +9,14 @@ from dash.exceptions import PreventUpdate
 
 import dash_bootstrap_components as dbc
 
-from ui.utils import (FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
+from ui.utils import (ID_HEADER, FIXED_HEADERS, WELL_NAME_HEADER, VALUE_HEADER,
                       LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, DEFAULT_SCENARIO_COL,
                       VARIABLE_NAME_HEADER, VARIABLE_NAME_ORIGINAL, get_scenario_cols)
 from ui.ui_components import (make_left_panel, make_right_panel,
-                              make_main_datatable)
+                              make_main_datatable, make_bound_frame)
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
-
 
 """
 dataiku assets
@@ -35,6 +34,14 @@ for asset in os.listdir(lib_path):
     shutil.copy(lib_path + "/" + asset, assets_folder + "/" + asset)
 """
 
+MODIFIED_DATASET = 'ForecastControlsTable.csv'
+ORIGINAL_DATASET = 'ForecastControlsTable_Original.csv'
+
+def get_dataset(dataset_name):
+    df = pd.read_csv(os.path.join(DATA_PATH, dataset_name))
+    df.reset_index(drop=True, inplace=True)
+    df.insert(0, ID_HEADER, df.index)
+    return df
 
 app = Dash(
     __name__,
@@ -44,7 +51,7 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-df_init = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable.csv'))
+df_init = get_dataset(MODIFIED_DATASET)
 
 state_dict = {'df': df_init.to_dict(),
               'active_well': None,
@@ -167,6 +174,26 @@ def render_sub_table(active_cell,state):
 
     return child, state, disable_button
 
+## Update lower / upper bound frame
+@callback(
+    Output('bound-frame', 'children'),
+    Input('datatable-subset', 'active_cell'),
+    State("state-store", "data")
+)
+def show_bounds(active_cell, state):
+    if not active_cell:
+        # no action needed if there is no active cell
+        raise PreventUpdate
+    
+    df = pd.DataFrame(state['df'])
+    bounds = df[df[ID_HEADER] == active_cell['row_id']][[LOWER_BOUND_HEADER, UPPER_BOUND_HEADER]]
+    
+    lower = bounds[LOWER_BOUND_HEADER].values[0]
+    upper = bounds[UPPER_BOUND_HEADER].values[0]
+
+    children = make_bound_frame(lower, upper)
+
+    return children
 
 ## Change time step table input
 @callback(
@@ -327,7 +354,7 @@ def trigger_main_table_update(confirm_add, confirm_reset, state, scenario):
         right_panel_update = dash.no_update
 
     elif ("confirm-reset-table" == ctx.triggered_id):
-        df = pd.read_csv(os.path.join(DATA_PATH,'ForecastControlsTable_Original.csv'))
+        df = get_dataset(ORIGINAL_DATASET)
         right_panel_update = make_right_panel(df, None, None)
 
     else:
@@ -345,6 +372,9 @@ def trigger_main_table_update(confirm_add, confirm_reset, state, scenario):
     prevent_initial_call=True
 )
 def save_table_to_file(_, state):
+    #df = pd.DataFrame(state['df'])
+    #table_handle = dataiku.Dataset(MODIFIED_DATASET)
+    #table_handle.write_with_schema(df) 
     return True
 
 
