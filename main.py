@@ -366,7 +366,7 @@ def trigger_main_table_update(confirm_add, confirm_reset, state, scenario):
 
 ## Save all scenarios
 @app.callback(
-    Output("save-scenario-toast", "is_open"),
+    Output("save-table-toast", "is_open"),
     Input("save-scenarios", "n_clicks"),
     State("state-store", "data"),
     prevent_initial_call=True
