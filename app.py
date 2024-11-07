@@ -14,7 +14,8 @@ from ui.ui_component_opt import (make_left_panel, make_main_datatable, make_righ
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 UI_PATH = os.path.join(os.path.dirname(__file__), 'ui')
 
-DATASET = "OptimizationVariablesTable.csv"
+ORIGINAL_DATASET = "OptimizationVariablesTable.csv"
+MODIFIED_DATASET = "OptimizationVariablesTable.csv"
 
 
 def get_dataset(dataset_name):
@@ -31,7 +32,7 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-df_init = get_dataset(DATASET)
+df_init = get_dataset(MODIFIED_DATASET)
 
 state_dict = {'df': df_init.to_dict(),
               'active_well': None
@@ -93,23 +94,26 @@ def render_main_table(_, state):
     Output("state-store", "data", allow_duplicate=True),
     Output("update-all", "disabled"),
     Input('datatable-main',  'active_cell'),
+    Input("confirm-reset-table", "n_clicks"),
     State("state-store", "data"),
     prevent_initial_call=True
 )
-def render_sub_table(active_cell,state):
+def render_sub_table(active_cell, confirm_n, state):
 
-    if not active_cell:
+    if ("confirm-reset-table" == ctx.triggered_id):
+        df = get_dataset(ORIGINAL_DATASET)
+        child = make_right_panel(df, None)
+        disable_button = True
+        state['df'] = df.to_dict()
+
+    elif not active_cell:
         raise PreventUpdate
 
-    #if active_cell['column_id'] in FIXED_HEADERS:
-        # only update if the user clicks on a column
-    #    raise PreventUpdate
-
-    df = pd.DataFrame(state['df'])
-    well = state['active_well'] = active_cell['row_id']
-
-    child = make_right_panel(df, well)
-    disable_button = False
+    else:
+        df = pd.DataFrame(state['df'])
+        well = state['active_well'] = active_cell['row_id']
+        child = make_right_panel(df, well)
+        disable_button = False
 
     return child, state, disable_button
 
@@ -157,7 +161,8 @@ def table_editing(active_cell, confirm_n, state,
 
     elif active_cell['column_id'] in EDITABLE_COLS:
         # update from table input (user changes values manually)
-        new_values = pd.DataFrame(rows)[active_cell['column_id']].values
+        if ID_HEADER not in rows[0].keys(): PreventUpdate
+        new_values = new_rows[active_cell['column_id']].values
         col = active_cell['column_id']
     
     else:
@@ -216,6 +221,20 @@ def save_table_to_file(_, state):
     #table_handle = dataiku.Dataset(MODIFIED_DATASET)
     #table_handle.write_with_schema(df) 
     return True
+
+## Open or close popup to confirm reset table
+@app.callback(
+    Output("modal-reset-table", "is_open"),
+    Input("reset-table", "n_clicks"),
+    Input("confirm-reset-table", "n_clicks"),
+    Input('cancel-reset-table', 'n_clicks'),
+    State("modal-reset-table", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_modal_reset_table(reset_n, confirm_n, cancel_n, is_open):
+    if reset_n or cancel_n or confirm_n:
+        return not is_open
+    return is_open
 
 if __name__ == '__main__':
     app.run(debug=True)

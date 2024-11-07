@@ -5,7 +5,7 @@ import pandas as pd
 from dash import Dash, dcc, html, dash_table
 import dash_bootstrap_components as dbc
 
-from ui.utils_opt import (PAGE_SIZE, ID_HEADER, TIME_HEADER, INIT_VALUE_HEADER, WELL_NAME_HEADER,
+from ui.utils_opt import (PAGE_SIZE, ID_HEADER, VARIABLE_NAME_HEADER, INIT_VALUE_HEADER, WELL_NAME_HEADER,
                       WELL_TYPE_HEADER, LOWER_BOUND_HEADER, UPPER_BOUND_HEADER, SUBSET_COLS,
                       EDITABLE_COLS)
 
@@ -14,7 +14,7 @@ def make_modal_update_all():
     """
     Pop-up to overwrite optimization parameters by a constant number.
     """
-    parameter_select_options = [{'label': val, "value": val} for val in EDITABLE_COLS]
+    parameter_select_options = [{'label': val, "value": val} for val in EDITABLE_COLS if val != VARIABLE_NAME_HEADER]
 
     modal = dbc.Modal([
                 dbc.ModalBody([
@@ -45,6 +45,31 @@ def make_modal_update_all():
                 ),
             ],
     id="modal-update-all",
+    is_open=False,
+    )
+    return modal
+
+def make_modal_reset_table():
+
+    """
+    Pop-up to confirm reset table to original.
+    """
+
+    modal = dbc.Modal([
+                dbc.ModalBody([
+                    dbc.Row(html.P("All variables and values will be reset to the original table.")),
+                    ]),
+                dbc.ModalFooter([
+                    dbc.Row(children=[
+                        dbc.Col(dbc.Button("Confirm", id="confirm-reset-table",
+                                       n_clicks=0, size="sm")),
+                        dbc.Col(dbc.Button("Cancel", id="cancel-reset-table",
+                                        size="sm", n_clicks=0))
+                    ], justify='end')
+                    ]
+                ),
+            ],
+    id="modal-reset-table",
     is_open=False,
     )
     return modal
@@ -122,7 +147,7 @@ def make_left_panel():
                     page_size=PAGE_SIZE,
                     style_table={'overflowX': 'auto'},
                     style_cell={
-                        #'minWidth': '80px', 'width': '80px', 'maxWidth': '80px',
+                        'minWidth': '70px', 'width': '70px', 'maxWidth': '70px',
                         'textAlign': 'center'
                     }
                 )]),
@@ -159,11 +184,13 @@ def make_right_panel(df, well=None):
                         dbc.Col(html.Div(
                                 children = [
                                     dbc.Button("Update All", id='update-all', disabled=True, size="sm"),
-                                    dbc.Button("Save Table", id='save-table',size="sm")
+                                    dbc.Button("Save Table", id='save-table',size="sm"),
+                                    dbc.Button("Reset Table", id='reset-table',size="sm")
                                 ],
                                 className="d-grid gap-2 d-md-flex justify-content-md-end")
                             ),
                         make_modal_update_all(),
+                        make_modal_reset_table(),
                         dbc.Toast(
                             [html.P("Table has been saved!", className="mb-0")],
                                 id="save-table-toast",
