@@ -21,6 +21,7 @@ MODIFIED_DATASET = "OptimizationVariablesTable.csv"
 def get_dataset(dataset_name):
     df = pd.read_csv(os.path.join(DATA_PATH, dataset_name))
     df.reset_index(drop=True, inplace=True)
+    if ID_HEADER in df.columns: df.drop(labels=ID_HEADER, axis=1, inplace=True)
     df.insert(0, ID_HEADER, df.index)
     return df
 

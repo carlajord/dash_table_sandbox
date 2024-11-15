@@ -32,6 +32,15 @@ os.mkdir(assets_folder)
 # save styles to local assets folder from python library
 for asset in os.listdir(lib_path):
     shutil.copy(lib_path + "/" + asset, assets_folder + "/" + asset)
+
+## Option 2:
+# save styles to local assets folder from managed folder
+#styles_folder = dataiku.Folder("ForecastControlAssets")
+#for file_name in styles_folder.list_paths_in_partition():
+#    local_file_path = assets_folder + "/" + file_name
+#    with styles_folder.get_download_stream(file_name) as f_remote, open(local_file_path,'wb') as f_local:
+#        shutil.copyfileobj(f_remote, f_local)
+
 """
 
 MODIFIED_DATASET = 'ForecastControlsTable.csv'
@@ -40,6 +49,7 @@ ORIGINAL_DATASET = 'ForecastControlsTable_Original.csv'
 def get_dataset(dataset_name):
     df = pd.read_csv(os.path.join(DATA_PATH, dataset_name))
     df.reset_index(drop=True, inplace=True)
+    if ID_HEADER in df.columns: df.drop(labels=ID_HEADER, axis=1, inplace=True)
     df.insert(0, ID_HEADER, df.index)
     return df
 
